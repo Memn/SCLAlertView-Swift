@@ -32,7 +32,7 @@ public enum SCLAlertViewStyle {
         }
         
     }
-
+    
 }
 
 // Action Types
@@ -176,8 +176,8 @@ public class SCLAlertView: UIViewController {
     // UI Options
     public var iconTintColor: UIColor?
     public var customSubview : UIView?
+    public var buttons: [SCLButton] = [SCLButton]()
     
-
     
     // Members declaration
     var baseView = UIView()
@@ -193,7 +193,7 @@ public class SCLAlertView: UIViewController {
     var dismissBlock : DismissBlock?
     private var inputs = [UITextField]()
     private var input = [UITextView]()
-    internal var buttons = [SCLButton]()
+    
     private var selfReference: SCLAlertView?
     
     public init(appearance: SCLAppearance) {
@@ -381,7 +381,7 @@ public class SCLAlertView: UIViewController {
         appearance.setkWindowHeight(appearance.kWindowHeight + appearance.kTextViewdHeight)
         // Add text view
         let txt = UITextView()
-        // No placeholder with UITextView but you can use KMPlaceholderTextView library 
+        // No placeholder with UITextView but you can use KMPlaceholderTextView library
         txt.font = appearance.kTextFont
         //txt.autocapitalizationType = UITextAutocapitalizationType.Words
         //txt.clearButtonMode = UITextFieldViewMode.WhileEditing
@@ -449,13 +449,14 @@ public class SCLAlertView: UIViewController {
         var saturation : CGFloat = 0
         var brightness : CGFloat = 0
         var alpha : CGFloat = 0
+        var pressBrightnessFactor = 0.85
         btn.backgroundColor?.getHue(&hue, saturation: &saturation, brightness: &brightness, alpha: &alpha)
-        //brightness = brightness * CGFloat(pressBrightness)
+        brightness = brightness * CGFloat(pressBrightnessFactor)
         btn.backgroundColor = UIColor(hue: hue, saturation: saturation, brightness: brightness, alpha: alpha)
     }
     
     func buttonRelease(btn:SCLButton) {
-        btn.backgroundColor = viewColor
+        btn.backgroundColor = btn.customBackgroundColor
     }
     
     var tmpContentViewFrameOrigin: CGPoint?
@@ -466,12 +467,20 @@ public class SCLAlertView: UIViewController {
         keyboardHasBeenShown = true
         
         guard let userInfo = notification.userInfo else {return}
-        guard let beginKeyBoardFrame = userInfo[UIKeyboardFrameBeginUserInfoKey]?.CGRectValue.origin.y else {return}
-        guard let endKeyBoardFrame = userInfo[UIKeyboardFrameEndUserInfoKey]?.CGRectValue.origin.y else {return}
+        guard let endKeyBoardFrame = userInfo[UIKeyboardFrameEndUserInfoKey]?.CGRectValue.minY else {return}
         
-        tmpContentViewFrameOrigin = self.contentView.frame.origin
-        tmpCircleViewFrameOrigin = self.circleBG.frame.origin
-        let newContentViewFrameY = beginKeyBoardFrame - endKeyBoardFrame - self.contentView.frame.origin.y
+        if tmpContentViewFrameOrigin == nil {
+            tmpContentViewFrameOrigin = self.contentView.frame.origin
+        }
+        
+        if tmpCircleViewFrameOrigin == nil {
+            tmpCircleViewFrameOrigin = self.circleBG.frame.origin
+        }
+        
+        var newContentViewFrameY = self.contentView.frame.maxY - endKeyBoardFrame
+        if newContentViewFrameY < 0 {
+            newContentViewFrameY = 0
+        }
         let newBallViewFrameY = self.circleBG.frame.origin.y - newContentViewFrameY
         self.contentView.frame.origin.y -= newContentViewFrameY
         self.circleBG.frame.origin.y = newBallViewFrameY
@@ -481,9 +490,11 @@ public class SCLAlertView: UIViewController {
         if(keyboardHasBeenShown){//This could happen on the simulator (keyboard will be hidden)
             if(self.tmpContentViewFrameOrigin != nil){
                 self.contentView.frame.origin.y = self.tmpContentViewFrameOrigin!.y
+                self.tmpContentViewFrameOrigin = nil
             }
             if(self.tmpCircleViewFrameOrigin != nil){
                 self.circleBG.frame.origin.y = self.tmpCircleViewFrameOrigin!.y
+                self.tmpCircleViewFrameOrigin = nil
             }
             
             keyboardHasBeenShown = false
@@ -605,7 +616,7 @@ public class SCLAlertView: UIViewController {
         
         // Done button
         if appearance.showCloseButton {
-            addButton(completeText ?? "Done", target:self, selector:#selector(SCLAlertView.hideView))
+            addButton(completeText ?? "Tamam", target:self, selector:#selector(SCLAlertView.hideView))
         }
         
         //hidden/show circular view based on the ui option
